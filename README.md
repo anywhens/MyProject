@@ -12,6 +12,7 @@
 **Шаг 1. Склонируйте репозиторий**
 
 git clone https://github.com/your-repo-name/telegram-admin-bot.git
+
 cd telegram-admin-bot
 
 **Шаг 2. Установите зависимости**
@@ -19,12 +20,15 @@ cd telegram-admin-bot
 Создайте виртуальное окружение и установите зависимости:
 
 python -m venv venv
+
 source venv/bin/activate  # Для Windows используйте: venv\Scripts\activate
+
 pip install -r requirements.txt
 
 **Шаг 3. Настройте переменные окружения**
 
 BOT_TOKEN=ваш_токен_бота
+
 ADMIN_ID=ваш_telegram_id
 
 Узнать свой Telegram ID можно, написав любому боту, например, @userinfobot.
