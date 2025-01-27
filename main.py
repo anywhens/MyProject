@@ -2,7 +2,7 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 BOT_TOKEN = "7912549689:AAG8YzmSHfcaJoy2TBWLhv_baI9OaS7JpN8"
-ADMIN_ID = 6444944021    # Замените на свой ID
+ADMIN_ID = 6444944021   # Замените на свой ID
 
 user_context = {}
 
