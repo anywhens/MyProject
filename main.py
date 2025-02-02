@@ -1,10 +1,11 @@
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 
-BOT_TOKEN = "ваш_токен_бота"
-ADMIN_ID =  "ваш_telegram_id"  # Замените на свой ID
+BOT_TOKEN = "ваш_токен_бота"   # Замените на свой токен бота
+ADMIN_ID = "ваш_telegram_id"  # Замените на свой ID
 
 user_context = {}
+waiting_for_message = set()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")]]
@@ -15,19 +16,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.message.chat.id
+    await query.answer()
+    waiting_for_message.add(user_id)  # Добавляем пользователя в список тех, кто нажал кнопку
+    await query.message.edit_text(
+        "✍ Введите ваше сообщение и отправьте его.",
+        reply_markup=None  # Убираем кнопку после нажатия
+    )
+
 async def forward_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
+    if user_id not in waiting_for_message:
+        await update.message.reply_text("⚠️ Сначала нажмите на кнопку '📩 Отправить сообщение администратору'.")
+        return
+
     username = update.message.chat.username or "Без имени"
     message_text = update.message.text
 
     user_context[user_id] = username  # Сохраняем связь пользователя
+    waiting_for_message.remove(user_id)  # Убираем из списка после отправки
 
     # Отправляем сообщение администратору
     await context.bot.send_message(
         chat_id=ADMIN_ID,
         text=f"📬 Новое сообщение от @{username} (ID: {user_id}):\n{message_text}"
     )
-    await update.message.reply_text("✅ Ваше сообщение отправлено администратору.")
+    await update.message.reply_text("✅ Ваше сообщение успешно отправлено, ожидайте ответа.")
 
 async def reply_to_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.id != ADMIN_ID:
@@ -56,6 +72,7 @@ def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler, pattern="send_message"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_to_admin))
     application.add_handler(CommandHandler("reply", reply_to_user_command))
 
