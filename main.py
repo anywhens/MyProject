@@ -16,6 +16,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "ℹ️ *Справка по боту* ℹ️\n\n"
+        "📩 *Отправка сообщения администратору:*\n"
+        "- Нажмите на кнопку '📩 Отправить сообщение администратору'.\n"
+        "- Введите ваше сообщение и отправьте его.\n"
+        "- Дождитесь ответа от администратора.\n\n"
+        "🛠 *Команды:*\n"
+        "/start - Начать работу с ботом\n"
+        "/help - Получить справку\n"
+        "(Администратор) /reply <ID пользователя> <сообщение> - Ответить пользователю"
+    )
+    await update.message.reply_text(help_text, parse_mode="Markdown")
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.message.chat.id
@@ -72,6 +86,7 @@ def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CallbackQueryHandler(button_handler, pattern="send_message"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_to_admin))
     application.add_handler(CommandHandler("reply", reply_to_user_command))
