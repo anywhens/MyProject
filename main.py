@@ -1,3 +1,4 @@
+import os
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 
@@ -7,7 +8,27 @@ ADMIN_ID = "ваш_telegram_id"  # Замените на свой ID
 user_context = {}
 waiting_for_message = set()
 
+# Функция для создания нужных директорий и файлов
+def create_needed_files_and_folders():
+    # Папка для хранения выгружаемых файлов
+    folders = [r"MyProject-main\uploads"]
+
+    # Создаем все папки, если их нет
+    for folder in folders:
+        os.makedirs(folder, exist_ok=True)  # exist_ok=True не вызывает ошибку, если папка уже существует
+
+    # Файл для хранения данных поиска
+    files = [r"MyProject-main\uploads\search.txt"]
+    for file in files:
+        if not os.path.exists(file):
+            with open(file, 'w', encoding='utf-8') as f:
+                f.write("")  # Просто создаем пустой файл, если его нет
+
+# Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Создаем папки и файлы перед началом работы
+    create_needed_files_and_folders()
+
     keyboard = [[InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -16,6 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+# Обработчик команды /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
         "ℹ️ *Справка по боту* ℹ️"
@@ -30,6 +52,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
+# Обработчик кнопки "Отправить сообщение администратору"
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.message.chat.id
@@ -40,6 +63,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=None  # Убираем кнопку после нажатия
     )
 
+# Перенаправление сообщения администратору
 async def forward_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
     if user_id not in waiting_for_message:
@@ -59,6 +83,7 @@ async def forward_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text("✅ Ваше сообщение успешно отправлено, ожидайте ответа.")
 
+# Ответ администратора
 async def reply_to_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.id != ADMIN_ID:
         await update.message.reply_text("⛔ Эта команда доступна только администратору.")
@@ -82,6 +107,7 @@ async def reply_to_user_command(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка при отправке сообщения: {e}")
 
+# Основная функция
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
