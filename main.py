@@ -2,8 +2,8 @@ import os
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 
-BOT_TOKEN = "7912549689:AAG8YzmSHfcaJoy2TBWLhv_baI9OaS7JpN8"   # Замените на свой токен бота
-ADMIN_ID = int("6444944021")  # Замените на свой ID
+BOT_TOKEN = "ваш_токен_бота"   # Замените на свой токен бота
+ADMIN_ID = int("ваш_telegram_id")  # Замените на свой ID
 waiting_for_message = set()
 
 def create_needed_files_and_folders():
