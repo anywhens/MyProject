@@ -6,16 +6,6 @@ BOT_TOKEN = "ваш_токен_бота"   # Замените на свой то
 ADMIN_ID = int("ваш_telegram_id")  # Замените на свой ID
 waiting_for_message = set()
 
-def create_needed_files_and_folders():
-    folders = [r"MyProject-main\uploads"]
-    for folder in folders:
-        os.makedirs(folder, exist_ok=True)
-    files = [r"MyProject-main\uploads\search.txt"]
-    for file in files:
-        if not os.path.exists(file):
-            with open(file, 'w', encoding='utf-8') as f:
-                f.write("")
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     create_needed_files_and_folders()
     keyboard = [
