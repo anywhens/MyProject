@@ -39,11 +39,6 @@ ADMIN_ID=ваш_telegram_id
 
 Узнать свой Telegram ID можно, написав любому боту, например, @userinfobot.
 
-```sh
-\MyProject-main\uploads - Папка для хранения выгружаемых в бота файлов.
-\MyProject-main\uploads\search.txt - Файл для хранения данных для работы функции поиска.
-```
-
 **## ▶️ Запуск бота**
 
 ```ini
