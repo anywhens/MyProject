@@ -7,7 +7,6 @@ ADMIN_ID = int("ваш_telegram_id")  # Замените на свой ID
 waiting_for_message = set()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    create_needed_files_and_folders()
     keyboard = [
         [InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")],
         [InlineKeyboardButton("🔧 Частые проблемы", callback_data="common_issues")]
