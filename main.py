@@ -3,8 +3,8 @@ import sqlite3
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 
-BOT_TOKEN = "ваш_токен_бота"   # Замените на свой токен бота
-ADMIN_ID = int("ваш_telegram_id")  # Замените на свой ID
+BOT_TOKEN = "YOUR_BOT_TOKEN"   # Замените на свой токен бота
+ADMIN_ID = int("YOUR_ADMIN_ID")  # Замените на свой ID
 
 waiting_for_message = set()
 user_data = {}  # Хранит данные пользователей: {user_id: {'name', 'surname', 'group'}}
@@ -19,7 +19,7 @@ def init_db():
                  (user_id INTEGER PRIMARY KEY, 
                   name TEXT NOT NULL, 
                   surname TEXT NOT NULL, 
-                  group_name TEXT NOT NULL)''')
+                  group_name TEXT)''')  # Группа может быть NULL
     conn.commit()
     conn.close()
 
@@ -39,7 +39,7 @@ def load_users():
     conn.close()
     return users
 
-def save_user(user_id, name, surname, group_name):
+def save_user(user_id, name, surname, group_name=None):
     """Сохраняет или обновляет пользователя в базе данных"""
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -74,7 +74,8 @@ async def show_common_issues(update: Update, context: ContextTypes.DEFAULT_TYPE)
         [InlineKeyboardButton("🌐 Нет интернета", callback_data="issue_2")],
         [InlineKeyboardButton("🖨 Принтер не печатает", callback_data="issue_3")],
         [InlineKeyboardButton("🔊 Нет звука на ПК", callback_data="issue_4")],
-        [InlineKeyboardButton("⌨️ Клавиатура не работает", callback_data="issue_5")]
+        [InlineKeyboardButton("⌨️ Клавиатура не работает", callback_data="issue_5")],
+        [InlineKeyboardButton("🔙 Вернуться назад", callback_data="back_to_main")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text("Выберите проблему:", reply_markup=reply_markup)
@@ -98,7 +99,10 @@ async def issue_solution(update: Update, context: ContextTypes.DEFAULT_TYPE):
     solution_text = solutions.get(query.data, "Ошибка: проблема не найдена.")
     additional_text = "Если здесь нет решения вашей проблемы, напишите администратору о вашей проблеме указав кабинет в котором она имеется."
     
-    keyboard = [[InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")]]
+    keyboard = [
+        [InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")],
+        [InlineKeyboardButton("🔙 Вернуться назад", callback_data="back_to_main")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.edit_text(f"{solution_text}\n\n{additional_text}", reply_markup=reply_markup)
@@ -114,7 +118,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         waiting_for_message.add(user_id)
         await query.answer()
-        await query.message.edit_text("✍ Введите ваше сообщение для администратора.")
+        
+        # Добавляем кнопку "Вернуться назад" в сообщение с запросом ввода текста
+        keyboard = [
+            [InlineKeyboardButton("🔙 Вернуться назад", callback_data="back_to_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("✍️ Введите ваше сообщение для администратора.", reply_markup=reply_markup)
     
     elif query.data == "common_issues":
         await show_common_issues(update, context)
@@ -128,6 +138,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         registering_users[user_id] = {'step': 'name'}
         await query.answer()
         await context.bot.send_message(chat_id=user_id, text="Введите ваше имя:")
+    
+    elif query.data == "back_to_main":
+        # Возвращаем в главное меню
+        keyboard = [
+            [InlineKeyboardButton("📝 Регистрация", callback_data="register")],
+            [InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")],
+            [InlineKeyboardButton("🔧 Частые проблемы", callback_data="common_issues")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("👋 Выберите действие:", reply_markup=reply_markup)
 
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.chat.id
@@ -145,8 +165,14 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         elif step == 'surname':
             registering_users[user_id]['surname'] = text
-            registering_users[user_id]['step'] = 'group'
-            await update.message.reply_text("Введите вашу группу:")
+            registering_users[user_id]['step'] = 'is_student'
+            
+            keyboard = [
+                [InlineKeyboardButton("Да, я студент", callback_data="is_student_yes")],
+                [InlineKeyboardButton("Нет", callback_data="is_student_no")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text("Вы студент?", reply_markup=reply_markup)
             return
         
         elif step == 'group':
@@ -184,7 +210,10 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         username = f"@{update.message.chat.username}" if update.message.chat.username else "Без имени"
         
         if user_info:
-            user_text = f"{user_info['name']} {user_info['surname']}, группа {user_info['group']}, {username}"
+            if user_info.get('group'):
+                user_text = f"{user_info['name']} {user_info['surname']}, группа {user_info['group']}, {username}"
+            else:
+                user_text = f"{user_info['name']} {user_info['surname']}, {username}"
         else:
             user_text = f"{username}"
         
@@ -197,18 +226,49 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         await context.bot.send_message(chat_id=ADMIN_ID, text=admin_message)
         await update.message.reply_text("✅ Ваше сообщение отправлено администратору.")
         
-        # Возвращаем в главное меню
+        # Возвращаем в главное меню с кнопкой "Вернуться назад"
+        keyboard = [
+            [InlineKeyboardButton("🔙 Вернуться назад", callback_data="back_to_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Вы можете вернуться в главное меню:", reply_markup=reply_markup)
+        return
+
+    # Если не регистрация и не сообщение администратору
+    await update.message.reply_text("ℹ Пожалуйста, используйте кнопки меню для взаимодействия с ботом.")
+
+async def is_student_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if query.data == "is_student_yes":
+        registering_users[user_id]['step'] = 'group'
+        await query.answer()
+        await context.bot.send_message(chat_id=user_id, text="Введите вашу группу:")
+    elif query.data == "is_student_no":
+        # Сохраняем пользователя в базу данных без группы
+        name = registering_users[user_id]['name']
+        surname = registering_users[user_id]['surname']
+        
+        save_user(user_id, name, surname)
+        user_data[user_id] = {
+            'name': name,
+            'surname': surname,
+            'group': None
+        }
+        
+        del registering_users[user_id]
+        await query.answer()
+        await context.bot.send_message(chat_id=user_id, text="✅ Регистрация завершена!")
+        
+        # Показываем главное меню
         keyboard = [
             [InlineKeyboardButton("📝 Регистрация", callback_data="register")],
             [InlineKeyboardButton("📩 Отправить сообщение администратору", callback_data="send_message")],
             [InlineKeyboardButton("🔧 Частые проблемы", callback_data="common_issues")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("👋 Выберите действие:", reply_markup=reply_markup)
-        return
-
-    # Если не регистрация и не сообщение администратору
-    await update.message.reply_text("ℹ Пожалуйста, используйте кнопки меню для взаимодействия с ботом.")
+        await context.bot.send_message(chat_id=user_id, text="👋 Выберите действие:", reply_markup=reply_markup)
 
 async def reply_to_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.id != ADMIN_ID:
@@ -251,10 +311,18 @@ def main():
     
     application = Application.builder().token(BOT_TOKEN).build()
     
+    # Обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("reply", reply_to_user_command))
+    
+    # Обработчик для кнопок "Да, я студент" и "Нет"
+    application.add_handler(CallbackQueryHandler(is_student_handler, pattern="^is_student_"))
+    
+    # Общий обработчик для остальных кнопок
     application.add_handler(CallbackQueryHandler(button_handler))
+    
+    # Обработчик текстовых сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
     
     application.run_polling()
